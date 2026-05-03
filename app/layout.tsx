@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'AI Travel Planner - Your Smart Itinerary Generator',
+  title: 'Travelia - Your AI Trip Assistant',
   description: 'Plan your perfect trip with AI-powered itinerary generation. Get personalized travel schedules based on your preferences.',
   generator: 'v0.app',
   icons: {
@@ -35,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
-      <body className="font-sans antialiased">
+    <html lang="en" className="bg-background overflow-hidden">
+      <body className="font-sans antialiased overflow-hidden">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

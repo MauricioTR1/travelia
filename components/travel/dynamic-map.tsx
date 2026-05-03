@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet"
+import type { Marker as LeafletMarker } from "leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { ExternalLink, Navigation } from "lucide-react"
@@ -120,10 +121,21 @@ export default function DynamicMap({
 }: DynamicMapProps) {
   const [mounted, setMounted] = useState(false)
   const mapRef = useRef<L.Map>(null)
+  const markerRefs = useRef<Map<string, LeafletMarker>>(new Map())
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Open the popup of the selected marker whenever selection changes from the itinerary list
+  useEffect(() => {
+    if (!selectedItemId) return
+    const marker = markerRefs.current.get(selectedItemId)
+    if (marker) {
+      // Small timeout so the map has finished flying before the popup opens
+      setTimeout(() => marker.openPopup(), 350)
+    }
+  }, [selectedItemId])
 
   if (!mounted) return null
 
@@ -160,6 +172,10 @@ export default function DynamicMap({
                 click: () => onSelectItem(isSelected ? null : item.id),
               }}
               zIndexOffset={isSelected ? 1000 : 0}
+              ref={(markerInstance) => {
+                if (markerInstance) markerRefs.current.set(item.id, markerInstance)
+                else markerRefs.current.delete(item.id)
+              }}
             >
               {destination && (
                 <Popup offset={[0, -10]} className="custom-popup">
