@@ -120,54 +120,102 @@ export async function generateItinerary(
   }
 
   // 2. Build dynamic query based on preferences
+  // Using nwr (nodes, ways, relations) to capture places mapped as areas
   let attractionQueries = `
-    node["tourism"~"museum|attraction|gallery|viewpoint"](around:5000,${lat},${lon});
-    node["historic"~"monument|ruins"](around:5000,${lat},${lon});
+    nwr["tourism"~"museum|attraction|gallery|viewpoint"](around:5000,${lat},${lon});
+    nwr["historic"~"monument|ruins"](around:5000,${lat},${lon});
   `
   
   if (preferences.includes("Explore historical sites")) {
-    attractionQueries += `node["historic"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["historic"](around:5000,${lat},${lon});\n`
   }
   if (preferences.includes("Nature & Outdoors") || preferences.includes("Hang out")) {
-    attractionQueries += `node["leisure"~"park|garden|nature_reserve"](around:5000,${lat},${lon});\n`
-    attractionQueries += `node["natural"~"beach|peak|water"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["leisure"~"park|garden|nature_reserve"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["natural"~"beach|peak|water"](around:5000,${lat},${lon});\n`
   }
   if (preferences.includes("Shopping")) {
-    attractionQueries += `node["shop"~"mall|department_store|clothes|boutique|gift"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["shop"~"mall|department_store|clothes|boutique|gift"](around:5000,${lat},${lon});\n`
   }
   if (preferences.includes("Art & Museums")) {
-    attractionQueries += `node["tourism"~"museum|gallery|artwork"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["tourism"~"museum|gallery|artwork"](around:5000,${lat},${lon});\n`
   }
   if (preferences.includes("Drinking/Bars")) {
-    attractionQueries += `node["amenity"~"bar|pub|biergarten"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["amenity"~"bar|pub|biergarten"](around:5000,${lat},${lon});\n`
   }
   if (preferences.includes("Adventure")) {
-    attractionQueries += `node["leisure"~"water_park|theme_park|escape_game"](around:5000,${lat},${lon});\n`
-    attractionQueries += `node["tourism"="theme_park"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["leisure"~"water_park|theme_park|escape_game"](around:5000,${lat},${lon});\n`
+    attractionQueries += `nwr["tourism"="theme_park"](around:5000,${lat},${lon});\n`
   }
 
   const overpassQuery = `
     [out:json][timeout:15];
     (
-      node["amenity"~"restaurant|cafe"](around:5000,${lat},${lon});
+      nwr["amenity"~"restaurant|cafe"](around:5000,${lat},${lon});
       ${attractionQueries}
     );
-    out body 300;
+    out center 300;
   `
   
-  const overpassRes = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    body: overpassQuery,
-  })
-  
-  const overpassData = await overpassRes.json()
+  const endpoints = [
+    "https://overpass-api.de/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter"
+  ]
 
-  const elements = overpassData.elements || []
+  let elements: any[] = []
+  let success = false
 
-  // 3. Categorize results
-  const cafes = elements.filter((e: any) => e.tags?.amenity === "cafe" && e.tags.name) as OSMNode[]
-  const restaurants = elements.filter((e: any) => e.tags?.amenity === "restaurant" && e.tags.name) as OSMNode[]
-  const attractions = elements.filter((e: any) => 
+  for (const endpoint of endpoints) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 6000)
+      
+      const overpassRes = await fetch(endpoint, {
+        method: "POST",
+        body: overpassQuery,
+        headers: {
+          "User-Agent": "TraveliaApp/1.0",
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (overpassRes.ok) {
+        const overpassData = await overpassRes.json()
+        elements = overpassData.elements || []
+        success = true
+        break
+      } else {
+        console.warn(`Overpass API ${endpoint} failed with status:`, overpassRes.status)
+      }
+    } catch (error) {
+      console.warn(`Error fetching from ${endpoint}:`, error)
+    }
+  }
+
+  if (!success) {
+    console.error("All Overpass API endpoints failed. Using mock data.")
+  }
+
+  // 3. Categorize results and extract coordinates properly
+  const extractCoords = (e: any) => {
+    if (e.lat && e.lon) return { lat: e.lat, lon: e.lon };
+    if (e.center && e.center.lat && e.center.lon) return { lat: e.center.lat, lon: e.center.lon };
+    return { lat, lon }; // fallback to query center
+  };
+
+  const parsedElements = elements.map((e: any) => ({
+    ...e,
+    lat: extractCoords(e).lat,
+    lon: extractCoords(e).lon
+  }));
+
+  const cafes = parsedElements.filter((e: any) => e.tags?.amenity === "cafe" && e.tags.name) as OSMNode[]
+  const restaurants = parsedElements.filter((e: any) => e.tags?.amenity === "restaurant" && e.tags.name) as OSMNode[]
+  const attractions = parsedElements.filter((e: any) => 
     (e.tags?.tourism || e.tags?.historic || e.tags?.leisure || e.tags?.natural || e.tags?.shop || (e.tags?.amenity && e.tags.amenity !== "cafe" && e.tags.amenity !== "restaurant")) && e.tags.name
   ) as OSMNode[]
 
