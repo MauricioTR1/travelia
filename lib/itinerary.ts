@@ -51,7 +51,6 @@ function generateInfo(node: OSMNode, preferences: string[]): string {
   else if (preferences.includes("Drinking/Bars") && (tags.amenity === "bar" || tags.amenity === "pub" || tags.amenity === "biergarten")) match = "Matches your interest in bars."
   else if (preferences.includes("Shopping") && tags.shop) match = "Great for your shopping preference."
   else if ((preferences.includes("Nature & Outdoors") || preferences.includes("Hang out")) && (tags.leisure === "park" || tags.leisure === "garden" || tags.natural)) match = "Great outdoor spot to hang out."
-  else if (preferences.includes("Adventure") && (tags.leisure === "theme_park" || tags.tourism === "theme_park" || tags.leisure === "water_park")) match = "Matches your interest in Adventure."
   
   let hoursText = ""
   if (tags.opening_hours) {
@@ -157,10 +156,6 @@ export async function generateItinerary(
   }
   if (preferences.includes("Drinking/Bars")) {
     attractionQueries += `nwr["amenity"~"bar|pub|biergarten"](around:5000,${lat},${lon});\n`
-  }
-  if (preferences.includes("Adventure")) {
-    attractionQueries += `nwr["leisure"~"water_park|theme_park|escape_game"](around:5000,${lat},${lon});\n`
-    attractionQueries += `nwr["tourism"="theme_park"](around:5000,${lat},${lon});\n`
   }
 
   const overpassQuery = `

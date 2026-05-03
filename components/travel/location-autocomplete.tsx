@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { MapPin, Search, Loader2 } from "lucide-react"
-import { useDebounce } from "@/hooks/use-debounce"
+
 import {
   Command,
   CommandEmpty,
@@ -102,7 +102,7 @@ export function LocationAutocomplete({ value, onChange, onSelectLocation }: Loca
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
-          <CommandList>
+          <CommandList className="max-h-[200px] sm:max-h-[300px]">
             <CommandEmpty>
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">

@@ -23,7 +23,6 @@ const PREFERENCES = [
   "Local Cuisine",
   "Shopping",
   "Art & Museums",
-  "Adventure",
 ]
 
 
