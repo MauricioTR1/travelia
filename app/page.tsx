@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import { LandingHero } from "@/components/travel/landing-hero"
 import { TravelSidebar } from "@/components/travel/travel-sidebar"
 import { MapPlaceholder } from "@/components/travel/map-placeholder"
-import { generateItinerary, type DayItinerary } from "@/lib/itinerary"
+import { type DayItinerary } from "@/lib/itinerary"
+import { generateItineraryAction } from "@/app/actions"
 
 export type PlannerState = "form" | "loading" | "results"
 
@@ -42,7 +43,7 @@ export default function Home() {
     setSelectedItemId(null)
     setState("loading")
     try {
-      const generated = await generateItinerary(data.destination, data.days, data.preferences, data.startTime, data.endTime, data.userCoords)
+      const generated = await generateItineraryAction(data.destination, data.days, data.preferences, data.startTime, data.endTime, data.userCoords)
       setItinerary(generated)
       setState("results")
     } catch (error) {
