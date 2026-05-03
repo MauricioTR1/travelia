@@ -106,17 +106,33 @@ export async function generateItinerary(
   userCoords?: [number, number]
 ): Promise<DayItinerary[]> {
   // 1. Get destination coordinates via Nominatim
-  const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`)
-  const geoData = await geoRes.json()
-  
   let lat = userCoords ? userCoords[0] : 19.4326 // Default to Mexico City if no user coords
   let lon = userCoords ? userCoords[1] : -99.1332
 
-  if (geoData && geoData.length > 0) {
-    lat = parseFloat(geoData[0].lat)
-    lon = parseFloat(geoData[0].lon)
-  } else if (!userCoords) {
-    throw new Error("Destination not found and no user location available")
+  try {
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`, {
+      headers: {
+        "User-Agent": "TraveliaApp/1.0"
+      }
+    })
+    
+    if (geoRes.ok) {
+      const geoData = await geoRes.json()
+      if (geoData && geoData.length > 0) {
+        lat = parseFloat(geoData[0].lat)
+        lon = parseFloat(geoData[0].lon)
+      } else if (!userCoords) {
+        throw new Error("Destination not found and no user location available")
+      }
+    } else {
+      console.warn("Nominatim API error:", geoRes.status)
+      if (!userCoords) throw new Error("Destination not found and no user location available")
+    }
+  } catch (err) {
+    console.warn("Failed to fetch coordinates:", err)
+    if (!userCoords) {
+      console.warn("Using default coordinates for Mexico City")
+    }
   }
 
   // 2. Build dynamic query based on preferences
