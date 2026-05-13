@@ -121,7 +121,7 @@ export function TravelForm({ onSubmit, onLocationSelect, initialData }: TravelFo
             value={fromLocation}
             onChange={(e) => setFromLocation(e.target.value)}
             placeholder={isLocating ? "Locating..." : "Enter your starting location"}
-            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
+            className="w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground/50"
           />
         </div>
       </div>
